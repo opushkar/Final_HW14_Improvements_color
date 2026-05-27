@@ -1,9 +1,11 @@
 import os
 import pickle 
+
 from collections import UserDict
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict
 from record import Record
+from colorama import Fore, Style
 
 class AddressBook(UserDict):
     """Клас для зберігання записів та керування ними."""
@@ -83,17 +85,22 @@ class AddressBook(UserDict):
     
     # --- Красиве виведення у вигляді таблиці ---
     def get_table_view(self, records_list: Optional[List[Record]] = None) -> str:
-        """Повертає текстову таблицю списку контактів."""
+        """Повертає кольорову текстову таблицю списку контактів."""
         target_records = records_list if records_list is not None else list(self.data.values())
         if not target_records:
-            return "Address book is empty / No records to display."
+            return f"{Fore.YELLOW}Address book is empty / No records to display."
 
-        # Специфікація ширини колонок таблиці
-        header = f"{'Name':<12} | {'Phones':<23} | {'Birthday':<10} | {'Email':<20} | {'Address':<20} | {'Notes':<15}"
-        separator = "-" * len(header)
+
+        # Обов'язково перевірте, щоб тут було написано назву header_text:
+        header_text = f"{'Name':<12} | {'Phones':<23} | {'Birthday':<10} | {'Email':<20} | {'Address':<20} | {'Notes':<15}"
+        separator = "-" * len(header_text)
+        
+        
+        # Тепер ця змінна буде успішно знайдена Python:
+        header = f"{Fore.CYAN}{Style.BRIGHT}{header_text}"
         lines = [separator, header, separator]
 
-        for r in target_records:
+        for index, r in enumerate(target_records):
             phones = ", ".join(p.value for p in r.phones) or "None"
             birthday = r.birthday.value if r.birthday else "None"
             email = r.email.value if r.email else "None"
@@ -101,10 +108,17 @@ class AddressBook(UserDict):
             notes = "; ".join(r.notes) or "None"
 
             # Обрізаємо занадто довгі значення для збереження структури таблиці
-            lines.append(
+            row_text = (
                 f"{r.name.value[:12]:<12} | {phones[:23]:<23} | {birthday:<10} | "
                 f"{email[:20]:<20} | {address[:20]:<20} | {notes[:15]:<15}"
             )
+
+            # Якщо індекс парний — жовтий колір, якщо непарний — звичайний білий
+            if index % 2 == 0:
+                lines.append(f"{Fore.YELLOW}{row_text}")
+            else:
+                lines.append(f"{Fore.WHITE}{row_text}")
+        
         lines.append(separator)
         return "\n".join(lines)
 
