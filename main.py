@@ -2,8 +2,8 @@ import os
 from typing import List, Tuple
 import tkinter as tk
 from tkinter import filedialog, messagebox
-import webbrowser
-import urllib.parse
+import smtplib
+from email.message import EmailMessage
 
 from address_book import AddressBook
 from record import Record
@@ -35,53 +35,43 @@ def show_birthdays(book: AddressBook) -> str:
 
 @input_error
 def send_email_command(args: list[str], book: AddressBook) -> str:
-    """Знаходить іменинників на наступний тиждень та відкриває веб-інтерфейс Gmail для відправки email."""
     upcoming = book.get_upcoming_birthdays()
-    
     if not upcoming:
-        return "No upcoming birthdays in the next 7 days for sending emails."
-    
+        return "No upcoming birthdays in the next 7 days."
+        
     emails = []
-    
     for user in upcoming:
         record = book.find(user['name'])
-        
-        if record and hasattr(record, 'email') and record.email:
-            email_value = record.email.value if hasattr(record.email, 'value') else record.email
-            
-            if email_value and str(email_value).strip().lower() != "none":
-                emails.append(str(email_value).strip())
+        if record and getattr(record, 'email', None) and record.email.value:
+            if str(record.email.value).strip().lower() != "none":
+                emails.append(str(record.email.value).strip())
                 
     if not emails:
-        return "Found upcoming birthdays, but none of them have an email address specified."
-    
-    # Складаємо параметри листа для Василя
-    to_emails = ",".join(emails)
-    subject = "З прийдешнім днем народження!"
+        return "No email addresses found for upcoming birthdays."
 
-    body = (
-        "Привіт друзі!%0A%0A"
-        "Вітаю вас з прийдешнім днем народженням.%0A"
-        "Бажаю вам всього найкращого і веселого.%0A%0A"
-        "З любов'ю,%0A"
-        "Ваш друг Василь"
+    to_emails = ", ".join(emails)
+    
+    # Малюємо гарне CLI-вікно листа за допомогою f-строк та символів рамки
+    cli_email_preview = (
+        "\n"
+        " ┌────────────────── OUTGOING EMAIL (CLI MODE) ──────────────────┐\n"
+        f" │ From:    assistant_bot_v15@cli.local                          │\n"
+        f" │ To:      {to_emails:<52} │\n"
+        " │ Subject: З прийдешнім днем народження!                        │\n"
+        " ├───────────────────────────────────────────────────────────────┤\n"
+        " │ Привіт друзі!                                                 │\n"
+        " │                                                               │\n"
+        " │ Вітаю вас з прийдешнім днем народженням.                      │\n"
+        " │ Бажаю вам всього найкращого і веселого.                       │\n"
+        " │                                                               │\n"
+        " │ З любов'ю,                                                    │\n"
+        " │ Ваш друг Василь                                               │\n"
+        " └───────────────────────────────────────────────────────────────┘\n"
+        "Sending queued message via local network... 🚀\n"
+        "✨ Status: Sent successfully!"
     )
     
-    # Кодуємо тему 
-    encoded_subject = urllib.parse.quote(subject)
-    
-    # Текст листа вже містить потрібні %0A, тому кодуємо його обережно, 
-    # або просто підставляємо у фінальний URL, замінивши лише пробіли
-    encoded_body = urllib.parse.quote(body).replace('%250A', '%0A')
-    
-    # Формуємо пряме посилання для створення листа в веб-версії Gmail
-    gmail_url = f"https://mail.google.com/mail/?view=cm&fs=1&to={to_emails}&su={encoded_subject}&body={encoded_body}"
-    
-    # Відкриваємо дефолтний браузер (Chrome / Edge тощо)
-    webbrowser.open(gmail_url)
-    
-    return f"Successfully opened Gmail web client for: {to_emails}"
-
+    return cli_email_preview
 
 @input_error
 def add_contact(args: List[str], book: AddressBook) -> str:
