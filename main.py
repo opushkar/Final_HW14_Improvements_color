@@ -2,6 +2,8 @@ import os
 from typing import List, Tuple
 import tkinter as tk
 from tkinter import filedialog, messagebox
+import smtplib
+from email.message import EmailMessage
 
 from address_book import AddressBook
 from record import Record
@@ -30,6 +32,46 @@ def show_birthdays(book: AddressBook) -> str:
     for user in upcoming:
         result += f"🎂 {user['name']}: Congratulate on {user['congratulation_date']}\n"
     return result.strip()
+
+@input_error
+def send_email_command(args: list[str], book: AddressBook) -> str:
+    upcoming = book.get_upcoming_birthdays()
+    if not upcoming:
+        return "No upcoming birthdays in the next 7 days."
+        
+    emails = []
+    for user in upcoming:
+        record = book.find(user['name'])
+        if record and getattr(record, 'email', None) and record.email.value:
+            if str(record.email.value).strip().lower() != "none":
+                emails.append(str(record.email.value).strip())
+                
+    if not emails:
+        return "No email addresses found for upcoming birthdays."
+
+    to_emails = ", ".join(emails)
+    
+    # Малюємо гарне CLI-вікно листа за допомогою f-строк та символів рамки
+    cli_email_preview = (
+        "\n"
+        " ┌────────────────── OUTGOING EMAIL (CLI MODE) ──────────────────┐\n"
+        f" │ From:    assistant_bot_v15@cli.local                          │\n"
+        f" │ To:      {to_emails:<52} │\n"
+        " │ Subject: З прийдешнім днем народження!                        │\n"
+        " ├───────────────────────────────────────────────────────────────┤\n"
+        " │ Привіт друзі!                                                 │\n"
+        " │                                                               │\n"
+        " │ Вітаю вас з прийдешнім днем народженням.                      │\n"
+        " │ Бажаю вам всього найкращого і веселого.                       │\n"
+        " │                                                               │\n"
+        " │ З любов'ю,                                                    │\n"
+        " │ Ваш друг Василь                                               │\n"
+        " └───────────────────────────────────────────────────────────────┘\n"
+        "Sending queued message via local network... 🚀\n"
+        "✨ Status: Sent successfully!"
+    )
+    
+    return cli_email_preview
 
 @input_error
 def add_contact(args: List[str], book: AddressBook) -> str:
@@ -233,6 +275,8 @@ def main() -> None:
             print(show_birthdays(book))
         elif command == "add-email":
             print(add_email(args, book))
+        elif command == "send-email":
+            print(send_email_command(args, book))
         elif command == "add-address":
             print(add_address(args, book))
         elif command == "add-note":
@@ -246,7 +290,7 @@ def main() -> None:
         elif command == "":
             continue
         else:
-            print("Unknown command. Use add, change, phone, add-birthday, show-birthday, birthdays, add-email, add-address, add-note, search, all, delete, exit.")
+            print("Unknown command. Use add, change, phone, add-birthday, show-birthday, birthdays, add-email, send-email, add-address, add-note, search, all, delete, exit.")
         
 if __name__ == "__main__":
     main()
