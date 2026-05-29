@@ -1,7 +1,7 @@
 import os
-from typing import List, Tuple
-import tkinter as tk
-from tkinter import filedialog, messagebox
+
+from typing import Tuple, List
+
 import smtplib
 from email.message import EmailMessage
 
@@ -208,6 +208,46 @@ def search_contacts(args: List[str], book: AddressBook) -> str:
 
 
 @input_error
+def save_as_command(args: list[str], book: AddressBook) -> str:
+    """Зберігає адресную книгу за вказаним шляхом або пропонує дефолтний варіант."""
+    # Визначаємо дефолтний варіант (наприклад, у поточній папці з префіксом backup)
+    default_filename = "address_book_backup.bin"
+    default_path = os.path.abspath(default_filename)
+    
+    # 1. Якщо користувач не передав аргументи, запускаємо діалог прямо в CLI
+    if not args:
+        print(f"Default path proposed: {default_path}")
+        user_input = input("Press Enter to confirm or type your custom path & filename: ").strip()
+        
+        if user_input:
+            final_path = user_input
+        else:
+            final_path = default_path
+    else:
+        # 2. Якщо користувач одразу написав: save-as my_folder/book.bin
+        final_path = " ".join(args)
+
+    # Автоматично додаємо розширення .bin, якщо користувач забув його вказати
+    if not final_path.endswith('.bin') and not final_path.endswith('.pkl'):
+        final_path += '.bin'
+        
+    # Перевіряємо, чи існує папка, куди зберігаємо (якщо вказано складний шлях)
+    dirname = os.path.dirname(final_path)
+    if dirname and not os.path.exists(dirname):
+        try:
+            os.makedirs(dirname)  # Створюємо директорію, якщо її немає
+        except Exception as e:
+            return f"❌ Error: Cannot create directory '{dirname}'. Details: {e}"
+
+    try:
+        # Викликаємо ваш метод збереження з ДЗ
+        book.save_to_file(final_path)
+        return f"💾 Address book successfully saved to:\n➡️ {os.path.abspath(final_path)}"
+    except Exception as e:
+        return f"❌ Failed to save file. Error: {e}"
+
+
+@input_error
 def delete_contact(args: List[str], book: AddressBook) -> str:
     """Повністю видаляє контакт із книги."""
     if len(args) < 1:
@@ -234,30 +274,10 @@ def main() -> None:
         command, args = parse_input(user_input)
 
         if command in ["close", "exit"]:
-            # Автозбереження у папку проекту перед виходом
             book.save_to_file(os.path.dirname(os.path.abspath(__file__)), FILENAME)
-            
-             # ІМПРУВМЕНТ: Запит y/n через графічне вікно Windows після закриття
-            root = tk.Tk()
-            root.withdraw()
-            root.attributes("-topmost", True)
-            
-            # Показуємо стандартне вікно запиту Так/Ні
-            choice = messagebox.askyesno(
-                title="Save backup", 
-                message="База збережена локально. Бажаєте додатково зберегти копію файлу на комп'ютері?"
-            )
-            
-            if choice:  # Якщо користувач обрав 'Yes' (Y)
-                selected_folder = filedialog.askdirectory(title="Оберіть репозиторій/папку для збереження копії")
-                if selected_folder:
-                    print(book.save_to_file(selected_folder, FILENAME))
-                else:
-                    print("Saving backup cancelled. No folder was selected.")
-            
-            root.destroy()
-            print("Good bye!")
+            print("Good bye! 👋")
             break
+            
         
         elif command == "hello":
             print("How can I help you?")
@@ -287,10 +307,13 @@ def main() -> None:
             print(book.get_table_view())
         elif command == "delete":  
             print(delete_contact(args, book))
+        elif command == "save-as":
+            print(save_as_command(args, book))
+
         elif command == "":
             continue
         else:
-            print("Unknown command. Use add, change, phone, add-birthday, show-birthday, birthdays, add-email, send-email, add-address, add-note, search, all, delete, exit.")
+            print("Unknown command. Use add, change, phone, add-birthday, show-birthday, birthdays, add-email, send-email, add-address, add-note, search, all, save-as, delete, exit.")
         
 if __name__ == "__main__":
     main()
