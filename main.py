@@ -2,6 +2,8 @@ import os
 from typing import List, Tuple
 import tkinter as tk
 from tkinter import filedialog, messagebox
+import webbrowser
+import urllib.parse
 
 from address_book import AddressBook
 from record import Record
@@ -30,6 +32,56 @@ def show_birthdays(book: AddressBook) -> str:
     for user in upcoming:
         result += f"🎂 {user['name']}: Congratulate on {user['congratulation_date']}\n"
     return result.strip()
+
+@input_error
+def send_email_command(args: list[str], book: AddressBook) -> str:
+    """Знаходить іменинників на наступний тиждень та відкриває веб-інтерфейс Gmail для відправки email."""
+    upcoming = book.get_upcoming_birthdays()
+    
+    if not upcoming:
+        return "No upcoming birthdays in the next 7 days for sending emails."
+    
+    emails = []
+    
+    for user in upcoming:
+        record = book.find(user['name'])
+        
+        if record and hasattr(record, 'email') and record.email:
+            email_value = record.email.value if hasattr(record.email, 'value') else record.email
+            
+            if email_value and str(email_value).strip().lower() != "none":
+                emails.append(str(email_value).strip())
+                
+    if not emails:
+        return "Found upcoming birthdays, but none of them have an email address specified."
+    
+    # Складаємо параметри листа для Василя
+    to_emails = ",".join(emails)
+    subject = "З прийдешнім днем народження!"
+
+    body = (
+        "Привіт друзі!%0A%0A"
+        "Вітаю вас з прийдешнім днем народженням.%0A"
+        "Бажаю вам всього найкращого і веселого.%0A%0A"
+        "З любов'ю,%0A"
+        "Ваш друг Василь"
+    )
+    
+    # Кодуємо тему 
+    encoded_subject = urllib.parse.quote(subject)
+    
+    # Текст листа вже містить потрібні %0A, тому кодуємо його обережно, 
+    # або просто підставляємо у фінальний URL, замінивши лише пробіли
+    encoded_body = urllib.parse.quote(body).replace('%250A', '%0A')
+    
+    # Формуємо пряме посилання для створення листа в веб-версії Gmail
+    gmail_url = f"https://mail.google.com/mail/?view=cm&fs=1&to={to_emails}&su={encoded_subject}&body={encoded_body}"
+    
+    # Відкриваємо дефолтний браузер (Chrome / Edge тощо)
+    webbrowser.open(gmail_url)
+    
+    return f"Successfully opened Gmail web client for: {to_emails}"
+
 
 @input_error
 def add_contact(args: List[str], book: AddressBook) -> str:
@@ -233,6 +285,8 @@ def main() -> None:
             print(show_birthdays(book))
         elif command == "add-email":
             print(add_email(args, book))
+        elif command == "send-email":
+            print(send_email_command(args, book))
         elif command == "add-address":
             print(add_address(args, book))
         elif command == "add-note":
@@ -246,7 +300,7 @@ def main() -> None:
         elif command == "":
             continue
         else:
-            print("Unknown command. Use add, change, phone, add-birthday, show-birthday, birthdays, add-email, add-address, add-note, search, all, delete, exit.")
+            print("Unknown command. Use add, change, phone, add-birthday, show-birthday, birthdays, add-email, send-email, add-address, add-note, search, all, delete, exit.")
         
 if __name__ == "__main__":
     main()
