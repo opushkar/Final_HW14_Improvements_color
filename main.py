@@ -5,6 +5,9 @@ from typing import Tuple, List
 import smtplib
 from email.message import EmailMessage
 
+from datetime import datetime
+from colorama import Fore, Style
+
 from address_book import AddressBook
 from record import Record
 from errors import input_error
@@ -263,6 +266,70 @@ def show_all(book: AddressBook) -> str:
         return "Address book is empty."
     return "\n".join(str(record) for record in book.data.values())
 
+from datetime import datetime
+from colorama import Fore, Style
+
+@input_error
+def sort_contacts_command(args: list[str], book: AddressBook) -> str:
+    """Сортує контакти та підсвічує кольором колонку, за якою здійснено сортування."""
+    if not args:
+        return f"{Fore.RED}❌ Error: Please specify sorting criteria. Use: 'sort name' or 'sort birthday'{Style.RESET_ALL}"
+    
+    criteria = args[0].strip().lower()
+    records = list(book.data.values())
+    
+    if not records:
+        return "The address book is empty. Nothing to sort."
+
+    # Задаємо дефолтне підсвічування для колонок (білий/стандартний колір)
+    name_color = Fore.WHITE
+    bday_color = Fore.WHITE
+
+    # 1. Сортування за ІМЕНЕМ
+    if criteria == "name":
+        sorted_records = sorted(records, key=lambda r: str(r.name.value).lower())
+        title_mode = "SORTED BY NAME"
+        name_color = Fore.GREEN  # Підсвічуємо колонку імені зеленим!
+
+    # 2. Сортування за ДНЕМ НАРОДЖЕННЯ
+    elif criteria == "birthday":
+        with_birthday = [r for r in records if hasattr(r, 'birthday') and r.birthday and r.birthday.value and str(r.birthday.value).lower() != "none"]
+        without_birthday = [r for r in records if r not in with_birthday]
+        
+        def get_birthday_date(record):
+            try:
+                # Адаптуйте '%d.%m.%Y' під формат вашого ДЗ, якщо він відрізняється
+                return datetime.strptime(str(record.birthday.value), "%d.%m.%Y")
+            except Exception:
+                return datetime.min
+                
+        sorted_with_birthday = sorted(with_birthday, key=get_birthday_date)
+        sorted_records = sorted_with_birthday + without_birthday
+        title_mode = "SORTED BY BIRTHDAY"
+        bday_color = Fore.GREEN  # Підсвічуємо колонку дня народження зеленим!
+        
+    else:
+        return f"{Fore.RED}❌ Unknown sorting criteria. Use 'sort name' or 'sort birthday'.{Style.RESET_ALL}"
+
+    # 3. Формування красивої кольорової CLI-таблиці
+    result = f"\n{Fore.CYAN}📋 --- {title_mode} ---{Style.RESET_ALL}\n"
+    
+    # Заголовок таблиці з динамічним підсвічуванням
+    result += f" {name_color}{'     Name     ':<15}{Style.RESET_ALL} | {bday_color}{'Birthday 🎂  ':<15}{Style.RESET_ALL}\n"
+    result += f" {'-'*15:<15} | {'-'*15:<15}\n"
+    
+    # Виведення рядків контактів
+    for record in sorted_records:
+        bday = record.birthday.value if hasattr(record, 'birthday') and record.birthday and record.birthday.value else "None"
+        
+        # Застосовуємо колір безпосередньо до значень у колонках
+        colored_name = f"{name_color}{str(record.name.value):<15}{Style.RESET_ALL}"
+        colored_bday = f"{bday_color}{str(bday):<15}{Style.RESET_ALL}"
+        
+        result += f" 👤 {colored_name} | {colored_bday}\n"
+        
+    return result
+
 def main() -> None:
     # При запуску автозавантаження шукає файл у поточній папці проекту
     book = AddressBook.load_from_file(FILENAME)
@@ -309,11 +376,13 @@ def main() -> None:
             print(delete_contact(args, book))
         elif command == "save-as":
             print(save_as_command(args, book))
+        elif command == "sort":
+            print(sort_contacts_command(args, book))
 
         elif command == "":
             continue
         else:
-            print("Unknown command. Use add, change, phone, add-birthday, show-birthday, birthdays, add-email, send-email, add-address, add-note, search, all, save-as, delete, exit.")
+            print("Unknown command. Use add, change, phone, add-birthday, show-birthday, birthdays, add-email, send-email, add-address, add-note, search, all, save-as, sort name, sortbirthday, delete, exit.")
         
 if __name__ == "__main__":
     main()
