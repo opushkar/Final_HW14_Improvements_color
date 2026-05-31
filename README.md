@@ -85,6 +85,7 @@ python main.py
 | `save-as` | `[path/filename]` | Зберігає копію книги (пропонує дефолтний шлях, якщо викликано без аргументів) | `save-as` або `save-as backups/copy.bin` |
 | `delete` | `[ім'я]` | Повністю видаляє контакт із книги | `delete John` |
 | `exit` / `close` | - | Автозберігає базу та відкриває системне вікно для бекапу | `exit` |
+| `sort` | `[name / birthday]` | Сортує список контактів за обраним критерієм | `sort name` або `sort birthday` |
 
 
 ---
